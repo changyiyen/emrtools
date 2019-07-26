@@ -1,0 +1,54 @@
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <title>EMR tools</title>
+    <style type='text/css' media='screen'>
+      table{
+        border: 1px solid black;
+      }
+      table td{
+        border: 1px solid black;
+      }
+    </style>
+</head>
+<body>
+    <p><h1>EMR tools</h1></p>
+    <form action='http://localhost:5000/dispatch' method='post'>
+	<p>Tool to use:
+          <label><input type='radio' name='tool' value='emr_diff.py' checked>EMR diff</label>
+	  <label><input type='radio' name='tool' value='emr_diagnosis.py'>Diagnoses</label>
+	</p>
+	<p>User ID: <input type='text' name='uid' pattern='[0-9]{6}' placeholder='User ID (6 numerals)'></p>
+	<p>User password: <input type='password' name='passwd' placeholder='Password'></p>
+	<p>Patient ID: <input type='text' name='chartno' pattern='[0-9]{8}' placeholder='Patient ID (8 numerals)'></p>
+	<p>Starting date (defaults to 2019-01-01 if empty): <input type='date' name='startdate' min='2000-01-01'></p>
+	<p>Ending date (defaults to today if empty): <input type='date' name='enddate' min='2000-01-01'></p>
+	<input type='submit' value='Submit'>
+	<input type='reset'>
+    </form>
+    <hr />
+    {% if filelist %}
+      <p>Current cached files:</p>
+      <table>
+	<tr><th>Patient ID</th><th>Info type</th><th>Start date</th><th>End date</th><th>Modification date</th></tr>
+        {%- for f in filelist.keys() %}
+	    <tr>
+	      <td>{{ f[:8] }}</td>
+	      <td>
+	        {%- if f[9:13] == 'diff' %}
+		  <a href='cache/{{f}}'> EMR diff </a>
+		{%- elif f[9:13] == 'diag' %}
+		  <a href='cache/{{f}}'> Diagnosis</a>
+		{%- else %}
+		  <a href='cache/{{f}}'> Other</a>
+		{%- endif %}
+	      </td>
+	      <td>{{ f[14:24] }}</td><td>{{ f[25:35] }}</td><td>{{ filelist[f] }}</td>
+	    </tr>
+	 {%- endfor %}
+      </table>
+    {% else %}
+      <p>No processed files available</p>
+    {% endif %}
+</body>
+</html>
