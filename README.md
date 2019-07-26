@@ -30,7 +30,13 @@ The command-line tools are:
 
 ## Dependencies
 
-All files were written for Python 3.6+. Dependencies include BeautifulSoup (bs4) (for page parsing), lxml (BeautifulSoup dependency) and Flask (for the server).
+All files were written for Python 3.6+. Dependencies include [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) (bs4) (for page parsing), [lxml](https://lxml.de/parsing.html) (BeautifulSoup dependency) and [Flask](https://palletsprojects.com/p/flask/) (for the server). All dependencies can be installed with Pip3, e.g.:
+
+```shell
+pip3 install beautifulsoup4
+pip3 install lxml
+pip3 install Flask
+```
 
 ## Examples
 
