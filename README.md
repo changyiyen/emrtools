@@ -40,15 +40,30 @@ pip3 install Flask
 
 ## Examples
 
-* To get a list of diagnoses:
+* To get an HTML report of diagnoses made, in chronological order:
 
 ```shell
-python3 emr_diagnosis.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
+python3 emr_diagnosis.py --uid 123456 --passwd n@800101 --chartno 12345678 --startdate 2018-01-01 --enddate 2019-07-01
 ```
 
-* To get a report of diffs:
+* To get an HTML report of diffs between OPD notes:
 
 ```shell
-python3 emr_diff.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
+python3 emr_diff.py --uid 123456 --passwd n@800101 --chartno 12345678 --startdate 2018-01-01 --enddate 2019-07-01
 ```
 
+* To get a CSV list of encounter IDs for a patient:
+
+```shell
+python3 emr_encounters.py --uid 123456 --passwd n@800101 --chartno 12345678 --startdate 2018-01-01 --enddate 2019-07-01
+```
+
+* To retrieve all body temperature records from a Philips iVue server and output the information to a CSV file:
+
+```shell
+python3 ivue_scraper.py --allrecords --chartno 12345678 --encounterid I1234567890 --mode temp
+```
+
+## License
+
+emrtools is licensed under the coffeeware license, itself a lightly modified beerware license.
