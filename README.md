@@ -36,10 +36,13 @@ All files were written for Python 3.6+. Dependencies include BeautifulSoup (bs4)
 
 * To get a list of diagnoses:
 
-  * $python3 emr_diagnosis.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
+```shell
+python3 emr_diagnosis.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
+```
 
 * To get a report of diffs:
 
-  * $python3 emr_diff.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
-
+```shell
+python3 emr_diff.py -u 123456 -p n@800101 -c 12345678 -s 2018-01-01 -e 2019-07-01
+```
 
