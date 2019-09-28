@@ -405,6 +405,12 @@ def run_scraper(baseurl, args):
     return True
 
 if __name__ == '__main__':
+    # Change working directory to location of this script
+    try:
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        print(pathlib.Path.cwd())
+    except OSError:
+        print("[Error] Couldn't change working directory to location of this script", file=sys.stderr)
     parser = argparse.ArgumentParser(description="Scraping of data from Philips iVue server web interface at NCKUH",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--debug", action="store_true", help="Print debug info")

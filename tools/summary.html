@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+  <head>
+    <title>Patient summaries for {{ date }} </title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      /*@media only screen and (aspect-ratio < 0.7) {
+      }*/
+      .header {
+        text-align: center;
+      }
+      table, th, td {
+        border: 1px solid black;
+      }
+      tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+      tr:hover {
+        background-color: lightyellow;
+      }
+    </style>
+  </head>
+  <body>
+    <div class='header'><h1>Patient summary generated on {{ date }}</h1></div>
+    <hr>
+    <nav class='patientlist'>
+    {% if patient_data %}
+      <p>Patients:</p>
+      <ul>
+        {% for id in patient_data.keys() %}
+	<li><a href='#{{ id }}'>{{ id }}</a></li>
+	{% endfor %}
+      </ul>
+    {% else %}
+      <p>No available patient list</p>
+    {% endif %}
+    </nav>
+    <hr>
+    {% for id in patient_data.keys() %}
+    <section id='{{ id }}'>
+      <!-- <h3>Patient info for {{ patient_data[id]['name'] }}</h3> -->
+      <h3>Patient info for {{ id }}</h3>
+      <div class='vitals'>
+        <h4>Vitals</h4>
+	{% if patient_data[id]['vitals'] %}
+	<table class='vitals_table' id='{{ id }}_vitals'>
+          <tr>
+            <th>Time</th>
+	    <th>Temperature</th>
+	    <th>Pulse</th>
+	    <th>Respiration</th>
+	    <th>Systolic BP</th>
+	    <th>Diastolic BP</th>
+	  </tr>
+          {% for line in patient_data[id]['vitals'] %}
+          <tr>
+            <td>{{ line['Time'] }}</td>
+	    <td>
+	      {{ if line['Temperature'] >= 38 }}
+              <div class='hyperthermia'>
+	        {{ line['Temperature'] }}
+	      </div>
+	      {{ elif line['Temperature'] <= 35 }}
+	      <div class='hypothermia'>
+	        {{ line['Temperature'] }}
+	      </div>
+              {{ else }}
+                {{ line['Temperature'] }}
+	      {{endif}}
+	    </td>
+	    <td>{{ line['Pulse'] }}</td>
+	    <td>{{ line['Respiration'] }}</td>
+	    <td>{{ line['Systolic_BP'] }}</td>
+	    <td>{{ line['Diastolic_BP'] }}</td>
+	  </tr>
+          {% endfor %}
+	</table>
+	{% else %}
+	<p>(No data)</p>
+	{% endif %}
+      </div>
+      <div class='nursing'>
+	<h4>Nursing records</h4>
+	{% if patient_data[id]['nursing'] %}
+	<table class='nursing_table' id='{{ id }}_nursing'>
+          <tr>
+	    <th>Time</th>
+	    <th>Event type</th>
+	    <th>Assessment type</th>
+	    <th>Action</th>
+	  </tr>
+          {% for line in patient_data[id]['nursing'] %}
+	  <tr>
+	    <td>{{ line['Time'] }}</td>
+	    <td>{{ line['Event_Type']}}</td>
+            <td>{{ line['Assessment_Type'] }}</td>
+	    <td>{{ line['Action'] }}</td>
+	  </tr>
+          {% endfor %}
+	</table>
+	{% else %}
+	<p>(No data)</p>
+	{% endif %}
+      </div>
+      <div class='orders'>
+	<h4>Orders</h4>
+	{% if patient_data[id]['orders'] %}
+	<table class='orders_table' id='{{ id }}_orders'>
+	<tr>
+	  <th>Time</th>
+	  <th>Order</th>
+	  <th>Type</th>
+	</tr>
+	{% for line in patient_data[id]['orders']%}
+	<tr>
+	  <td>{{ line['Time'] }}</td>
+	  <td>{{ line['Order'] }}</td>
+	  <td>{{ line['Type'] }}</td>
+	</tr>
+	{% endfor %}
+	</table>
+	{% else %}
+	<p>(No data)</p>
+	{% endif %}
+      </div>
+    </section>
+    <hr>
+    {% endfor %}
+  </body>
+</html>

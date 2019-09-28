@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 #-*- encoding: utf-8 -*-
 
-import asyncio
+#import asyncio
 import datetime
 #import multiprocessing
 import os

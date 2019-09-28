@@ -10,54 +10,22 @@
 import argparse
 import csv
 import datetime
-import http.cookiejar
+import os
 import pathlib
 import re
 import sys
-import urllib.parse
 import urllib.request
 
 import bs4
 
-def get_sessionid(args):
-    # Get session ID from EMR server using credentials
-    # Cookie storage is required
-    cj = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
-    login = opener.open("http://hisweb.hosp.ncku/WebsiteSSO/PCS/").read().decode()
-    login_soup = bs4.BeautifulSoup(login, "html.parser")
-    VIEWSTATE = login_soup.find("input", attrs={"name":"__VIEWSTATE"})["value"]
-    VIEWSTATEGENERATOR = login_soup.find("input", attrs={"name":"__VIEWSTATEGENERATOR"})["value"]
-    EVENTVALIDATION = login_soup.find("input", attrs={"name":"__EVENTVALIDATION"})["value"]
-
-    if args.debug:
-        print("[DEBUG] VIEWSTATE: ", VIEWSTATE, file=sys.stderr)
-        print("[DEBUG] VIEWSTATEGENERATOR: ", VIEWSTATEGENERATOR, file=sys.stderr)
-        print("[DEBUG] EVENTVALIDATION: ", EVENTVALIDATION, file=sys.stderr)
-
-    post_url = "http://hisweb.hosp.ncku/WebsiteSSO/PCS/default.aspx"
-
-    post_fields = {
-        "TextBoxId": args.uid,
-        "TextBoxPwd": args.passwd,
-        "__VIEWSTATE": VIEWSTATE,
-        "__VIEWSTATEGENERATOR": VIEWSTATEGENERATOR,
-        "__EVENTVALIDATION": EVENTVALIDATION,
-        "Button1": "登入系統"
-    }
-    post_request = urllib.request.Request(post_url, urllib.parse.urlencode(post_fields).encode())
-    post_reply = opener.open(post_request).read().decode()
-    ## Apparently requesting "http://hisweb.hosp.ncku/WebsiteSSO/PCS/showchart.aspx?chartno=..." does *not* work (a 500 Internal Error is returned)
-    emr_reply = opener.open("http://hisweb.hosp.ncku/EmrQuery/autologin.aspx?chartno=" + args.chartno + "&systems=0")
-
-    if args.debug:
-        print("[DEBUG] EMR reply:", emr_reply, file=sys.stderr)
-
-    session_id = re.search("S\(([a-z0-9]+)\)", emr_reply.geturl()).groups()[0]
-
-    return session_id
+from lib import session
 
 if __name__ == '__main__':
+    # Change working directory to location of this script
+    try:
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    except OSError:
+        print("[Error] Couldn't change working directory to location of this script", file=sys.stderr)
     parser = argparse.ArgumentParser(description="Retrieval of encounter IDs ('medicalsn') from NCKUH EMR",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--debug", action="store_true", help="Print debug info")
@@ -66,38 +34,34 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--chartno", type=str, required=True, help="Chart number")
     parser.add_argument("-s", "--startdate", type=str, help="Starting date in ISO8601 format", default="2019-01-01")
     parser.add_argument("-e", "--enddate", type=str, help="Ending date in ISO8601 format (defaults to today)", default=datetime.date.today().isoformat())
-    ## TODO: modify HTML output to include sorting within page
     #parser.add_argument("-r", "--reverse", action="store_true", help="Reverse output chronology")
+    parser.add_argument("-l", "--latest", action="store_true", help="Print the patient's latest inpatient encounter ID to standard output")
     parser.add_argument("-o", "--outputdir", type=str, help="Set output directory", default=pathlib.Path.cwd().parent / 'cache')
-    parser.add_argument("--version", action="version", version="%(prog)s 0.1.0 'Annihilation'")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.2.1 'Annihilation'")
     args = parser.parse_args()
 
-    CHARTNO = args.chartno
-    STARTDATE = args.startdate
-    ENDDATE = args.enddate
-    
     # Input validation
-    assert re.match('\d{6}', CHARTNO), "ID number malformed (less than 6 digits)"
-    assert re.match('\d{8}', CHARTNO), "Chart number malformed (less than 8 digits)"
+    assert re.match('\d{6}', args.uid), "ID number malformed (less than 6 digits)"
+    assert re.match('\d{8}', args.chartno), "Chart number malformed (less than 8 digits)"
     try:
-        datetime.datetime.strptime(STARTDATE, '%Y-%m-%d')
+        datetime.datetime.strptime(args.startdate, '%Y-%m-%d')
     except ValueError:
         raise ValueError("Incorrect start date format (should be YYYY-MM-DD)")
     try:
-        datetime.datetime.strptime(ENDDATE, '%Y-%m-%d')
+        datetime.datetime.strptime(args.enddate, '%Y-%m-%d')
     except ValueError:
         raise ValueError("Incorrect end date format (should be YYYY-MM-DD)")
 
     if args.debug:
         print("[DEBUG] UID: ", args.uid, file=sys.stderr)
-        print("[DEBUG] Chart number: ", CHARTNO, file=sys.stderr)
-        print("[DEBUG] Start date: ", STARTDATE, file=sys.stderr)
-        print("[DEBUG] End date: ", ENDDATE, file=sys.stderr)
+        print("[DEBUG] Chart number: ", args.chartno, file=sys.stderr)
+        print("[DEBUG] Start date: ", args.startdate, file=sys.stderr)
+        print("[DEBUG] End date: ", args.enddate, file=sys.stderr)
 
-    ROOTURL = "http://hisweb.hosp.ncku/EmrQuery/" + "(S(" + get_sessionid(args) + "))/" + "tree/"
+    ROOTURL = "http://hisweb.hosp.ncku/EmrQuery/" + "(S(" + session.get_sessionid(args) + "))/" + "tree/"
 
     # Get list of visits
-    visit_list_url = "list2.aspx?" + "chartno=" + CHARTNO + "&start=" + STARTDATE + "&stop=" + ENDDATE + "&query=0"
+    visit_list_url = "list2.aspx?" + "chartno=" + args.chartno + "&start=" + args.startdate + "&stop=" + args.enddate + "&query=0"
     with urllib.request.urlopen(ROOTURL + visit_list_url) as f:
         visit_list = f.read().decode("utf-8")
 
@@ -135,8 +99,18 @@ if __name__ == '__main__':
     out_list.extend(sorted(list(i_set)))
     out_list.extend(sorted(list(e_set)))
 
+    if args.latest:
+        print(sorted(list(i_set))[-1], end='', file=sys.stdout)
+        #outpath = pathlib.Path(args.outputdir) / (args.chartno + "_enct_adm_latest_" + datetime.date.today().isoformat() + ".csv")
+        #with open(outpath, mode="w", encoding="utf-8", newline="") as csvfile:
+        #    writer = csv.writer(csvfile)
+        #    #writer.writerow(["Chart number", "Encounter ID"])
+        #    #writer.writerow([args.chartno, latest_admission])
+        #    writer.writerow([latest_admission])
+        exit(0)
+
     # Note that the default encoding on other OSs may not be UTF-8
-    outpath = pathlib.Path(args.outputdir) / (CHARTNO + "_enct_" + args.startdate + "_" + args.enddate + ".csv")
+    outpath = pathlib.Path(args.outputdir) / (args.chartno + "_enct_" + args.startdate + "_" + args.enddate + ".csv")
     with open(outpath, mode="w", encoding="utf-8", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(["Chart number", "Encounter ID"])
