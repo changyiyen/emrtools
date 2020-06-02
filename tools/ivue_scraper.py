@@ -15,6 +15,7 @@
 # Changelog:
 # 0.1.0 (2019-07-15): initial release
 # 0.1.1 (2019-07-19): added ability to traverse earlier pages; added more informative docstrings
+# 0.1.2 (2020-02-01): changed '-f'/'--file' to '-l'/'--list' for clarity; '-f'/'--filetype' now refers to output filetype
 
 import argparse
 import csv
@@ -29,7 +30,6 @@ import urllib.request
 import bs4
 
 def get_ivue_data(baseurl, chartno, encounterid, mode):
-#def get_ivue_data(baseurl, chartno, encounterid, args):
     """Get tables from the iVue pages, parse them, pass them for further processing, and collect results.
 
     Args:
@@ -51,9 +51,7 @@ def get_ivue_data(baseurl, chartno, encounterid, mode):
     # ICU monitor: many pages
     # ICU handover: probably one page only
 
-
     if mode == 'temp':
-    #if args.mode == 'temp':
         if args.allrecords:
             results = dict()
             for i in map(lambda x: temp(x), get_page_soup(baseurl, id, 2)):
@@ -61,7 +59,6 @@ def get_ivue_data(baseurl, chartno, encounterid, mode):
         else:
             results = temp(next(get_page_soup(baseurl, id, 2)))
     if mode == 'hr':
-    #if args.mode == 'hr':
         if args.allrecords:
             results = dict()
             for i in map(lambda x: hr(x), get_page_soup(baseurl, id, 2)):
@@ -69,7 +66,6 @@ def get_ivue_data(baseurl, chartno, encounterid, mode):
         else:
             results = hr(next(get_page_soup(baseurl, id, 2)))
     if mode == 'rr':
-    #if args.mode == 'rr':
         if args.allrecords:
             results = dict()
             for i in map(lambda x: rr(x), get_page_soup(baseurl, id, 2)):
@@ -77,19 +73,15 @@ def get_ivue_data(baseurl, chartno, encounterid, mode):
         else:
             results = rr(next(get_page_soup(baseurl, id, 2)))
     if mode == 'surgery':
-    #if args.mode == 'surgery':
         # '--allrecords' argument silently ignored
         results = surgery(next(get_page_soup(baseurl, id, 1)), next(get_page_soup(baseurl, id, 8)))
     if mode == 'respiration':
-    #if args.mode == 'respiration':
         # '--allrecords' argument silently ignored
         results = respiration(next(get_page_soup(baseurl, id, 1)), next(get_page_soup(baseurl, id, 8)))
     if mode == 'cxr':
-    #if args.mode == 'cxr':
         # '--allrecords' argument silently ignored
         results = cxr(next(get_page_soup(baseurl, id, 1)), next(get_page_soup(baseurl, id, 8)))
     if mode == 'vaccine':
-    #if args.mode == 'vaccine':
         # '--allrecords' argument silently ignored
         results = vaccine(next(get_page_soup(baseurl, id, 8)))
     return results
@@ -108,7 +100,6 @@ def temp(tprsheet_soup):
 
     """
     # TODO: consider modifying this function to output the raw numbers only (as strings) to facilitate easier data importation
-    # TODO: consider adding a strict mode (where both the temperature and site of measurement have to be present to count)
     #   and a relaxed mode (where only the temperature is needed). Current behavior is in strict mode.
     # Time: mainTBL > tbody > tr starting with "time"
     times = tprsheet_soup.find('table', {'class': 'mainTBL'}).find('td', string=re.compile('time')).parent.find_all('td')
@@ -346,7 +337,7 @@ def get_page_soup(baseurl, id, sheetno):
             break
 
 def writeout(output, outputdir, chartno, encounterid, mode):
-#def writeout(output, chartno, encounterid, args):
+#def writeout(output, outputdir, chartno, encounterid, mode, filetype="csv"):
     """Write retrieved iVue data to CSV output (UTF-8 encoding).
 
     Args:
@@ -355,6 +346,7 @@ def writeout(output, outputdir, chartno, encounterid, mode):
         chartno (str): Chart number, e.g., "12345678".
         encounterid (str): Encounter ID, e.g., "I20190014727".
         mode (str): Type of data to retrieve, e.g., 'hr' (heart rate)
+        filetype (str) [optional]: Filetype to write to (CSV or SQLite)
 
     Returns:
         No return value.
@@ -363,15 +355,18 @@ def writeout(output, outputdir, chartno, encounterid, mode):
         Does not raise errors itself but called functions (open, csv.writer.writerow, etc.) can raise relevant errors.
 
     """
-    # TODO: consider changing interface to replace outputdir and mode with program args
-    # Note that the default encoding on certain OSs may not be UTF-8
-    outpath = pathlib.Path(outputdir) / (chartno + '_' + encounterid + '_icu_' + mode + '.csv')
-    #outpath = pathlib.Path(args.outputdir) / (chartno + '_' + encounterid + '_icu_' + args.mode + '.csv')
-    with open(outpath, mode='w', encoding='utf-8', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Date', 'Event'])
-        for i in sorted(output.keys()):
-            writer.writerow([i, output[i]])
+    if filetype == "csv":
+        # Note that the default encoding on certain OSs may not be UTF-8
+        outpath = pathlib.Path(outputdir) / (chartno + '_' + encounterid + '_icu_' + mode + '.csv')
+        #outpath = pathlib.Path(args.outputdir) / (chartno + '_' + encounterid + '_icu_' + args.mode + '.csv')
+        with open(outpath, mode='w', encoding='utf-8', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['Date', 'Event'])
+            for i in sorted(output.keys()):
+                writer.writerow([i, output[i]])
+    elif filetype == "sqlite":
+        # TODO: implement sqlite output
+        pass
 
 def run_scraper(baseurl, args):
     """Runs scraper for all provided chart numbers and encounter IDs, then writes data by calling writeout().
@@ -384,21 +379,21 @@ def run_scraper(baseurl, args):
         bool: True for sucess, false otherwise
 
     """
-    if args.file:
+    if args.list:
         if args.debug:
-            print('[DEBUG] Reading file: ', args.file, file=sys.stderr)
-        with open(args.file, 'r') as fh:
+            print('[DEBUG] Reading file: ', args.list, file=sys.stderr)
+        with open(args.list, 'r') as fh:
             reader = csv.DictReader(fh)
             # ICU data is only extracted if the patient is admitted
             encounters = [r for r in reader if r['Encounter_ID'][0] == 'I']
         for e in encounters:
             out = get_ivue_data(baseurl, e['Chart_number'], e['Encounter_ID'], args.mode)
-            writeout(out, args.outputdir, e['Chart_number'], e['Encounter_ID'], args.mode)
+            writeout(out, args.outputdir, e['Chart_number'], e['Encounter_ID'], args.mode, filetype=args.filetype)
     elif args.chartno and args.encounterid:
         if args.debug:
             print('[DEBUG] Fetching data for chart number ', args.chartno, ', encounter ID ', args.encounterid, file=sys.stderr)
         out = get_ivue_data(baseurl, args.chartno, args.encounterid, args.mode)
-        writeout(out, args.outputdir, args.chartno, args.encounterid, args.mode)
+        writeout(out, args.outputdir, args.chartno, args.encounterid, args.mode, filetype=args.filetype)
     else:
         print("[ERROR] Missing chart number(s) and encounter ID(s)", file=sys.stderr)
         return False
@@ -420,13 +415,14 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--daemon", action="store_true", help="Run as daemon")
     parser.add_argument("-i", "--interval", type=int, help="Interval between checks (in seconds)", default=1800)
     parser.add_argument("-s", "--server", type=str, help="IP of iVue server", default="192.168.202.9")
-    parser.add_argument("-f", "--file", type=str, help="CSV file containing chart number and encounter ID, with header line ('Chart_number','Encounter_ID')")
+    parser.add_argument("-l", "--list", type=str, help="List (CSV format) containing chart number and encounter ID, with header line ('Chart_number','Encounter_ID')")
     parser.add_argument("-c", "--chartno", type=str, required=('-f' not in sys.argv) and ('--file' not in sys.argv), help="Chart number")
     parser.add_argument("-e", "--encounterid", type=str, required=('-f' not in sys.argv) and ('--file' not in sys.argv), help="Encounter ID")
     parser.add_argument("-m", "--mode", type=str, choices=["temp", "hr", "rr", "surgery", "respiration", "cxr", "vaccine"], help="Type of record to output", default="respiration")
     #parser.add_argument("-n", "--nounits", action="store_true", help="Do not output measurement units")
+    parser.add_argument("-f", "--filetype", type=str, choices=["csv","sqlite"], help="Output file format (CSV or SQLite)", default="csv")
     parser.add_argument("-o", "--outputdir", type=str, help="Set output directory", default=pathlib.Path.cwd())
-    parser.add_argument("--version", action="version", version="%(prog)s 0.1.1 'Bicycle Repair Man'")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.1.2 'Bicycle Repair Man'")
     args = parser.parse_args()
 
     # Input validation
@@ -434,7 +430,7 @@ if __name__ == '__main__':
         assert re.match('\d{8}', args.chartno), 'Chart number malformed (less than 8 digits)'
 
     # Example URL: http://192.168.202.9/iVue/patient.aspx?ChartNo=19314023&CaseNo=I20190014727
-    # Potential for URL injection here...
+    # TODO: Potential for URL injection here...needs a safety check
     BASEURL = 'http://' + args.server + '/iVue/'
 
     if args.debug:

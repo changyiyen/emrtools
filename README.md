@@ -26,6 +26,14 @@ The command-line tools are:
 
 * emr_encounters.py - lists encounter codes for a patient for a given time period
 
+* emr_nursing.py - prints nursing records for a patient for a particular encounter
+
+* emr_orders.py - retrieves medical orders for a patient for a articular encounter
+
+* emr_summary.py - generates a summary of patient events last night 
+
+* emr_vitals.py - retrieves measurements of patient vitals
+
 * ivue_scraper.py - simple screen scraper for Philips iVue systems
 
 ## Dependencies
